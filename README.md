@@ -13,11 +13,11 @@ Mega Task Manager is a powerful and efficient task management tool designed to h
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/mega-task-manager.git
+    git clone https://github.com/Tejas-Dherange/Task_Manager.git
     ```
 2. Navigate to the project directory:
     ```bash
-    cd mega-task-manager
+    cd Task_Manager
     ```
 3. Install dependencies:
     ```bash
