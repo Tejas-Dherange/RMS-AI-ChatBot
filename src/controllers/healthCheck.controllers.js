@@ -1,6 +1,6 @@
 import { ApiResponse } from "../utils/api-response.utils.js";
 
-const healthCheck = async (req, res) => {
+const healthCheckRouter = async (req, res) => {
   res.status(200).json(
     new ApiResponse(200, {
       message: "Server is running",
@@ -8,4 +8,4 @@ const healthCheck = async (req, res) => {
   );
 };
 
-export { healthCheck };
+export { healthCheckRouter };

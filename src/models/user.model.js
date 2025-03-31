@@ -97,8 +97,10 @@ userSchema.methods.generaterefereshToken = async function () {
 //custom methods to generate emailVerification Token
 userSchema.methods.temporaryToken = async function () {
   const unHashedToken = crypto.randomBytes(32).toString("hex");
-
-  const hashedToken = crypto.createHash(unHashedToken).digest("hex");
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(unHashedToken)
+    .digest("hex");
 
   const tokenExpiry = Date.now() + 20 * 60 * 1000;
 
