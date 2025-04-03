@@ -12,21 +12,22 @@ Mega Task Manager is a powerful and efficient task management tool designed to h
 ## Installation
 
 1. Clone the repository:
-    ```bash
-    git clone https://github.com/Tejas-Dherange/Task_Manager.git
-    ```
+   ```bash
+   git clone https://github.com/Tejas-Dherange/Task_Manager.git
+   ```
 2. Navigate to the project directory:
-    ```bash
-    cd Task_Manager
-    ```
+   ```bash
+   cd Task_Manager
+   ```
 3. Install dependencies:
-    ```bash
-    npm install
-    ```
+   ```bash
+   npm install
+   ```
 
 ## Usage
 
 Run the application:
+
 ```bash
 npm start
 ```
