@@ -34,7 +34,6 @@ const userSchema = new Schema(
     },
     fullname: {
       type: String,
-      required: true,
       trim: true,
     },
     isEmailVerified: {
@@ -68,7 +67,7 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-//custom methods to check password
+//custom methods to check password  
 userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
