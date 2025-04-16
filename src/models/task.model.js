@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { AvailableUserRoles, userRolesEnum } from "../utils/constant.js";
+import { AvailableUserRoles, taskStatusEnum, userRolesEnum } from "../utils/constant.js";
 const taskSchema = new Schema(
   {
     title: {
@@ -29,7 +29,7 @@ const taskSchema = new Schema(
     },
     status: {
       type: String,
-      enum: userRolesEnum,
+      enum: taskStatusEnum,
       default: AvailableUserRoles.TODO,
     },
     attachMents: {
