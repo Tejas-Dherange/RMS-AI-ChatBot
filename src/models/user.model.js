@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { AvailableUserRoles, userRolesEnum } from "../utils/constant.js";
 const userSchema = new Schema(
   {
     avatar: {
@@ -31,6 +32,11 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
+    },
+    role:{
+      type:String,
+      enum:userRolesEnum,
+      default:AvailableUserRoles.MEMBER
     },
     fullname: {
       type: String,
