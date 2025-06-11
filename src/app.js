@@ -18,6 +18,6 @@ app.use(express.json());
 
 
 app.use("/api/v1/healthcheck", healthCheckRouter);
-app.use("/api/v1/user",userRoutes)
+app.use("/api/v1/user",userRoutes) 
 
 export default app;
