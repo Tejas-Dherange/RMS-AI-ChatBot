@@ -1,6 +1,6 @@
 // import { chatModel } from "../utils/langChain.utils.js";
 import { GoogleGenAI } from "@google/genai";
-const ai = new GoogleGenAI({ apiKey: "AIzaSyBeo0xkvjSvd2ptZ48cRsMxn-MbPPYdoEk" });
+const ai = new GoogleGenAI({ apiKey: "" });
 
 const getSqlQuery = async (req, res) => {
   const { naturalQuery, tableSchema } = req.body;
