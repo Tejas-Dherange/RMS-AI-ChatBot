@@ -1,6 +1,5 @@
 // import { chatModel } from "../utils/langChain.utils.js";
 import { GoogleGenAI } from "@google/genai";
-<<<<<<< HEAD
 import xlsx from "xlsx";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -26,9 +25,6 @@ function reviveDates(obj) {
   }
   return obj;
 }
-=======
-const ai = new GoogleGenAI({ apiKey: "" });
->>>>>>> 48a01aca51979baf4bee51af18aee689b144a60c
 
 const getSqlQuery = async (req, res) => {
   const ai = new GoogleGenAI({
@@ -148,7 +144,6 @@ ${naturalQuery}
   }
 };
 
-<<<<<<< HEAD
 const seedDb = async (req, res) => {
   try {
     const filePath = path.join(
@@ -215,6 +210,3 @@ const seedDb = async (req, res) => {
   }
 };
 export { getSqlQuery, seedDb };
-=======
-export { getSqlQuery };
->>>>>>> 48a01aca51979baf4bee51af18aee689b144a60c
