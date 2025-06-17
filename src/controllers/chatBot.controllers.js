@@ -9,11 +9,11 @@ const __dirname = path.dirname(__filename);
 
 function reviveDates(obj) {
   if (Array.isArray(obj)) return obj.map(reviveDates);
-  if (obj && typeof obj === 'object') {
+  if (obj && typeof obj === "object") {
     const newObj = {};
     for (const key in obj) {
       if (
-        typeof obj[key] === 'string' &&
+        typeof obj[key] === "string" &&
         /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(obj[key])
       ) {
         newObj[key] = new Date(obj[key]);
@@ -37,6 +37,7 @@ const getSqlQuery = async (req, res) => {
 You are an assistant that converts natural language into Prisma ORM queries for a PostgreSQL database...
 Use this database model:
 
+
 model JobOrder {
   id                        Int      @id @default(autoincrement())
   orgCode                   String
@@ -45,22 +46,25 @@ model JobOrder {
   printedBy                 String
   jobStatus                 String
   ticketGenDateTime         DateTime
+  originalTicketGenDateTime DateTime
   jobPrintDateTime          DateTime
+  gapTicketToPrint          Float?
   materialIssueDateTime     DateTime
   materialDeliveredDateTime DateTime
+  gapIssueToDelivery        Float?
   materialAckDateTime       DateTime
+  gapDeliveryToAck          Float?
+  gapTicketToAck            Float?
   ticketStatus              String
   remarks                   String?
   ospJobs                   String?
-  gapTicketToPrint          Float?
-  gapIssueToDelivery        Float?
-  gapDeliveryToAck          Float?
-  gapTicketToAck            Float?
   gapTicketToDelivery       Float?
   agingBucket               String?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
 
 Respond in **strict JSON format**:
 {
@@ -123,7 +127,9 @@ ${naturalQuery}
         prismaQuery = JSON.parse(json.prisma_code);
         prismaQuery = reviveDates(prismaQuery);
       } catch (e) {
-        return res.status(400).json({ error: "Invalid prisma_code object", raw: json.prisma_code });
+        return res
+          .status(400)
+          .json({ error: "Invalid prisma_code object", raw: json.prisma_code });
       }
       let result;
       if (json.prisma_method === "findMany") {
@@ -145,68 +151,212 @@ ${naturalQuery}
 };
 
 const seedDb = async (req, res) => {
-  try {
+  try { 
     const filePath = path.join(
       __dirname,
       "../../Job-Order-Performance-Report .xlsx",
     );
     const workbook = xlsx.readFile(filePath);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = xlsx.utils.sheet_to_json(sheet).slice(0, 500);
+    const data = xlsx.utils.sheet_to_json(sheet, { raw: false }).slice(0,10804);
 
-    for (const row of data) {
-      await db.jobOrder.create({
-        data: {
-          orgCode: String(row["ORG CODE"] || ""),
-          ticketNo: String(row["TICKET NO"] || ""),
-          jobOrderNo: String(row["Job Order NO"] || ""),
-          printedBy: String(row["IV PRINTED BY"] || ""),
-          jobStatus: String(row["JOB STATUS"] || ""),
-          ticketGenDateTime: new Date(row["TICKET GEN DATE & TIME"]),
-          jobPrintDateTime: new Date(row["1ST JOB PRINT DATE &TIME"]),
-          materialIssueDateTime: new Date(
-            row["LAST MATERIAL ISSUE DATE & TIME"],
-          ),
-          materialDeliveredDateTime: new Date(
-            row["Material Delivered Date & TIME"],
-          ),
-          materialAckDateTime: new Date(row["Material Ack Date & TIME"]),
-          ticketStatus: String(row["TIcket Status"] || ""),
-          remarks: row["Remarks"] ? String(row["Remarks"]) : null,
-          ospJobs: row["Osp Jobs"] ? String(row["Osp Jobs"]) : null,
-          gapTicketToPrint:
-            parseFloat(
-              row["Total gap - Ticket Generation to Ticket Print by RMS (Hrs)"],
-            ) || null,
-          gapIssueToDelivery:
-            parseFloat(row["Total gap -Mat Issue to Mat Deliver (Hrs)"]) ||
-            null,
-          gapDeliveryToAck:
-            parseFloat(
-              row["Total gap -Mat Deliver to Mat Acknowledgement (Hrs)"],
-            ) || null,
-          gapTicketToAck:
-            parseFloat(
-              row[
-                "Total gap - Ticket Generation to Mat Acknowledgement  (Hrs)"
-              ],
-            ) || null,
-          gapTicketToDelivery:
-            parseFloat(row["Total gap - Ticket Generation to Mat del(Hrs)"]) ||
-            null,
-          agingBucket: row['Aging Bucket :"Performance category']
-            ? String(row['Aging Bucket :"Performance category'])
-            : null,
+    const parseCustomDate = (dateString) => {
+      if (!dateString || typeof dateString !== "string") {
+        return null;
+      }
+
+      const trimmed = dateString.trim();
+      // console.log(`Parsing: "${trimmed}"`);
+
+      // Try multiple formats that Excel might return
+      const formats = [
+        // 24-hour format: DD-MM-YYYY HH:MM
+        {
+          regex: /^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{1,2})$/,
+          parse: (match) => {
+            const [, day, month, year, hour, minute] = match;
+            return new Date(
+              Number(year),
+              Number(month) - 1,
+              Number(day),
+              Number(hour),
+              Number(minute)
+            );
+          }
         },
-      });
+        // 12-hour format: DD-MM-YYYY HH:MM:SS AM/PM
+        {
+          regex: /^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})\s+(AM|PM)$/i,
+          parse: (match) => {
+            const [, day, month, year, hours, minutes, seconds, meridian] = match;
+            let hour24 = Number(hours);
+            
+            if (meridian.toUpperCase() === "PM" && hour24 !== 12) {
+              hour24 += 12;
+            } else if (meridian.toUpperCase() === "AM" && hour24 === 12) {
+              hour24 = 0;
+            }
+
+            return new Date(
+              Number(year),
+              Number(month) - 1,
+              Number(day),
+              hour24,
+              Number(minutes),
+              Number(seconds)
+            );
+          }
+        },
+        // 12-hour format without seconds: DD-MM-YYYY HH:MM AM/PM
+        {
+          regex: /^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{1,2})\s+(AM|PM)$/i,
+          parse: (match) => {
+            const [, day, month, year, hours, minutes, meridian] = match;
+            let hour24 = Number(hours);
+            
+            if (meridian.toUpperCase() === "PM" && hour24 !== 12) {
+              hour24 += 12;
+            } else if (meridian.toUpperCase() === "AM" && hour24 === 12) {
+              hour24 = 0;
+            }
+
+            return new Date(
+              Number(year),
+              Number(month) - 1,
+              Number(day),
+              hour24,
+              Number(minutes)
+            );
+          }
+        },
+        // Excel might also return numbers (serial dates)
+        {
+          regex: /^\d+(\.\d+)?$/,
+          parse: (match) => {
+            const serial = Number(match[0]);
+            // Excel serial date conversion
+            const excelEpoch = new Date(1899, 11, 30);
+            return new Date(excelEpoch.getTime() + serial * 24 * 60 * 60 * 1000);
+          }
+        }
+      ];
+
+      for (const format of formats) {
+        const match = trimmed.match(format.regex);
+        if (match) {
+          try {
+            const date = format.parse(match);
+            if (!isNaN(date.getTime())) {
+              // console.log(`✅ Parsed "${trimmed}" -> ${date}`);
+              return date;
+            }
+          } catch (e) {
+            console.log(`❌ Parse error for "${trimmed}":`, e.message);
+          }
+        }
+      }
+
+      console.log(`❌ No format matched for: "${trimmed}"`);
+      return null;
+    };
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const [index, row] of data.entries()) {
+      try {
+        // console.log(`\n--- Processing Row ${index + 1} ---`);
+
+        // Debug: Show raw values first
+        // console.log(`Raw TICKET GEN: "${row["TICKET GEN DATE & TIME"]}" (${typeof row["TICKET GEN DATE & TIME"]})`);
+        // console.log(`Raw Material Ack: "${row["Material Ack Date & TIME"]}" (${typeof row["Material Ack Date & TIME"]})`);
+
+        // Parse required dates
+        const ticketGenDateTime = parseCustomDate(row["TICKET GEN DATE & TIME"]);
+        const materialAckDateTime = parseCustomDate(row["Material Ack Date & TIME"]);
+
+        // Check if required dates are present
+        if (!ticketGenDateTime) {
+          console.error(`Row ${index + 1}: Failed to parse ticketGenDateTime`);
+          errorCount++;
+          continue;
+        }
+
+        if (!materialAckDateTime) {
+          console.error(`Row ${index + 1}: Failed to parse materialAckDateTime`);
+          errorCount++;
+          continue;
+        }
+
+        await db.jobOrder.create({
+          data: {
+            orgCode: String(row["ORG CODE"] || "").trim(),
+            ticketNo: String(row["TICKET NO"] || "").trim(),
+            jobOrderNo: String(row["Job Order NO"] || "").trim(),
+            printedBy: String(row["IV PRINTED BY"] || "").trim(),
+            jobStatus: String(row["JOB STATUS"] || "").trim(),
+            ticketGenDateTime: ticketGenDateTime,
+            originalTicketGenDateTime: parseCustomDate(
+              row["ORGINAL TICKET GENERATE  DATE & TIME"]
+            ),
+            jobPrintDateTime: parseCustomDate(row["1ST JOB PRINT DATE &TIME"]),
+            materialIssueDateTime: parseCustomDate(
+              row["LAST MATERIAL ISSUE DATE & TIME"]
+            ),
+            materialDeliveredDateTime: parseCustomDate(
+              row["Material Delivered Date & TIME"]
+            ),
+            materialAckDateTime: materialAckDateTime,
+            ticketStatus: String(row["TIcket Status"] || "").trim(),
+            remarks: row["Remarks"] ? String(row["Remarks"]).trim() : null,
+            ospJobs: row["Osp Jobs"] ? String(row["Osp Jobs"]).trim() : null,
+            gapTicketToPrint:
+              parseFloat(
+                row["Total gap - Ticket Generation to Ticket Print by RMS (Hrs)"]
+              ) || null,
+            gapIssueToDelivery:
+              parseFloat(row["Total gap -Mat Issue to Mat Deliver (Hrs)"]) || null,
+            gapDeliveryToAck:
+              parseFloat(
+                row["Total gap -Mat Deliver to Mat Acknowledgement (Hrs)"]
+              ) || null,
+            gapTicketToAck:
+              parseFloat(
+                row["Total gap - Ticket Generation to Mat Acknowledgement  (Hrs)"]
+              ) || null,
+            gapTicketToDelivery:
+              parseFloat(row["Total gap - Ticket Generation to Mat del(Hrs)"]) || null,
+            agingBucket: row['Aging Bucket :"Performance category']
+              ? String(row['Aging Bucket :"Performance category']).trim()
+              : null,
+          },
+        });
+
+        // console.log(`✅ Row ${index + 1} inserted successfully`);
+        // console.log(`   Ticket Gen Time: ${ticketGenDateTime}`);
+        // console.log(`   Material Ack Time: ${materialAckDateTime}`);
+        successCount++;
+
+      } catch (rowError) {
+        console.error(`❌ Error processing row ${index + 1}:`, rowError.message);
+        errorCount++;
+      }
     }
 
-    res.status(200).json({ message: "✅ Database seeded successfully." });
+    res.status(200).json({
+      message: "✅ Database seeding completed",
+      success: successCount,
+      errors: errorCount,
+      total: data.length,
+    });
+
   } catch (error) {
-    console.error("❌ Error:", error.message);
-    res
-      .status(500)
-      .json({ error: "Failed to seed data", details: error.message });
+    console.error("❌ Seeding Error:", error.message);
+    res.status(500).json({ 
+      error: "Failed to seed data", 
+      details: error.message 
+    });
   }
 };
+
 export { getSqlQuery, seedDb };

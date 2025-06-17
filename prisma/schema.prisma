@@ -23,17 +23,18 @@ model JobOrder {
   printedBy                 String
   jobStatus                 String
   ticketGenDateTime         DateTime
+  originalTicketGenDateTime DateTime
   jobPrintDateTime          DateTime
+  gapTicketToPrint          Float?
   materialIssueDateTime     DateTime
   materialDeliveredDateTime DateTime
+  gapIssueToDelivery        Float?
   materialAckDateTime       DateTime
+  gapDeliveryToAck          Float?
+  gapTicketToAck            Float?
   ticketStatus              String
   remarks                   String?
   ospJobs                   String?
-  gapTicketToPrint          Float?
-  gapIssueToDelivery        Float?
-  gapDeliveryToAck          Float?
-  gapTicketToAck            Float?
   gapTicketToDelivery       Float?
   agingBucket               String?
 
