@@ -4,6 +4,7 @@ import xlsx from "xlsx";
 import path from "path";
 import { fileURLToPath } from "url";
 import db from "../libs/db.js";
+import { askGemini } from "../utils/langChain.utils.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -158,7 +159,7 @@ const seedDb = async (req, res) => {
     );
     const workbook = xlsx.readFile(filePath);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = xlsx.utils.sheet_to_json(sheet, { raw: false }).slice(0,10804);
+    const data = xlsx.utils.sheet_to_json(sheet, { raw: false }).slice(0,2000);
 
     const parseCustomDate = (dateString) => {
       if (!dateString || typeof dateString !== "string") {
@@ -359,4 +360,14 @@ const seedDb = async (req, res) => {
   }
 };
 
-export { getSqlQuery, seedDb };
+const langChainOutput=async(req,res)=>{
+  const { naturalQuery } = req.body;
+
+  const ans =await askGemini(naturalQuery);
+
+  return res.status(200).json({
+    message:"output fetched succesfully",
+    data:ans
+  })
+}
+export { getSqlQuery, seedDb ,langChainOutput};
